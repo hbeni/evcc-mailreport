@@ -18,9 +18,9 @@ verbose=0
 nomail=0
 vehicle=".*"
 report="month"
+LANG=C   # to ensure basic unified formatting for floating point numbers
 
-
-for needed_prog in sed bc wget mailx /usr/sbin/sendmail; do
+for needed_prog in sed bc awk cut paste wget mailx /usr/sbin/sendmail; do 
         command -v "$needed_prog" > /dev/null
         [[ $? -gt 0 ]] && echo "unmet dependency: i really need '$needed_prog'!" >&2 && exit 1
 done
@@ -108,10 +108,6 @@ fetchresult=$?
 [[ $verbose == 1 ]] && echo "fetch result: $fetchresult; file=$file"
 [[ $fetchresult -gt 0 ]] && echo "fetch error $fetchresult while retrieving $fetchurl!" >&2 && cleantmp && exit 2;
 sed -i '/;;;;;/d' "/tmp/evcc-report-fetchresult.tmp"
-if [[ $lang == "de" ]]; then
-  sed -i 's/,/./g' /tmp/evcc-report-fetchresult.tmp
-  sed -i 's/;/,/g' /tmp/evcc-report-fetchresult.tmp
-fi
 head -n1  /tmp/evcc-report-fetchresult.tmp > $file.header
 tail -n+2 /tmp/evcc-report-fetchresult.tmp | grep -i -E ",(${vehicle})," > $file.content
 cat $file.header $file.content > $file
@@ -122,8 +118,8 @@ loaded_energy=$(cut -d, -f9 $file |tail +2 | paste -sd+ - | LANG=C bc -l)
 first_energy=$(cut -d, -f9 $file |tail -1)
 last_km=$(cut -d, -f6 $file |head -n2 |tail -n1)
 first_km=$(cut -d, -f6 $file |tail -n1)
-price=$(cut -d, -f12 $file |tail +2 | paste -sd+ - | LANG=C bc -l)
-solarpart=$(cut -d, -f9,11 $file | tail +2 | awk -F',' '{w+=$1; wx+=$1*$2} END{print wx/w}')
+price=$(cut -d, -f15 $file |tail +2 | paste -sd+ - | LANG=C bc -l)
+solarpart=$(cut -d, -f14 $file | tail +2 | awk '{w++; wx+=$1} END{print wx/w}')
 solarkwh=$(echo "$solarpart / 100 * $loaded_energy" | LANG=C bc -l)
 gridpart=$(echo "( 100 - $solarpart )" | LANG=C bc -l)
 gridkwh=$(echo "( 100 - $solarpart ) / 100 * $loaded_energy" | LANG=C bc -l)
